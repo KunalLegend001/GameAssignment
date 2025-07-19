@@ -70,6 +70,8 @@ public class GameManager : MonoBehaviour
         {
             score += 10;
             // Play match sound
+            matches++;
+            UpdateUI();
         }
         else
         {
@@ -80,4 +82,32 @@ public class GameManager : MonoBehaviour
 
         flippedCards.Clear();
     }
+
+
+
+    public int turns = 0;
+    public int matches = 0;
+
+    public TMPro.TextMeshProUGUI turnsText;
+    public TMPro.TextMeshProUGUI matchesText;
+
+    public void OnCardClicked(Card card)
+    {
+        if (!flippedCards.Contains(card))
+        {
+            flippedCards.Add(card);
+            turns++;
+            UpdateUI();
+
+            if (flippedCards.Count == 2)
+                StartCoroutine(CheckMatch());
+        }
+    }
+
+    void UpdateUI()
+    {
+        turnsText.text = "Turns: " + turns;
+        matchesText.text = "Matches: " + matches;
+    }
+
 }

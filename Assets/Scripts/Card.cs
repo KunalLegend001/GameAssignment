@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class Card : MonoBehaviour
@@ -7,15 +8,16 @@ public class Card : MonoBehaviour
     public Sprite backSprite;
 
     private SpriteRenderer sr;
+    public Transform spriteTransform;
     private bool isFlipped = false;
 
     private GameManager gameManager;
-
-    public Transform spriteTransform;
+    private Animator animator;
 
     void Start()
     {
         sr = spriteTransform.GetComponent<SpriteRenderer>();
+        animator = spriteTransform.GetComponent<Animator>();
         sr.sprite = backSprite;
         gameManager = FindObjectOfType<GameManager>();
         NormalizeSpriteSize();
@@ -26,21 +28,38 @@ public class Card : MonoBehaviour
         if (!isFlipped)
         {
             FlipCard();
-            gameManager.CardFlipped(this);
+            gameManager.OnCardClicked(this); // new method to track turns/matches
         }
     }
 
     public void FlipCard()
     {
+        animator.SetTrigger("Flip"); // Trigger the animation
+        StartCoroutine(ChangeSpriteAfterDelay());
         isFlipped = true;
-        sr.sprite = frontSprite;
-        NormalizeSpriteSize(); // In case aspect ratio differs
     }
 
     public void FlipBack()
     {
-        isFlipped = false;
+        StartCoroutine(FlipBackRoutine());
+    }
+    IEnumerator FlipBackRoutine()
+    {
+        animator.SetTrigger("Flip"); // Reuse the same animation
+
+        yield return new WaitForSeconds(1f); // Mid-flip
         sr.sprite = backSprite;
+        NormalizeSpriteSize();
+
+        yield return new WaitForSeconds(0.25f); // Finish animation
+        isFlipped = false;
+    }
+
+
+    IEnumerator ChangeSpriteAfterDelay()
+    {
+        yield return new WaitForSeconds(1f); // mid-flip point
+        sr.sprite = frontSprite;
         NormalizeSpriteSize();
     }
 
@@ -49,7 +68,7 @@ public class Card : MonoBehaviour
         if (sr.sprite == null) return;
 
         Vector2 size = sr.sprite.bounds.size;
-        float targetSize = 1.5f; // how big each card appears on screen (adjust to fit layout)
+        float targetSize = 1.5f;
 
         float scaleFactor = targetSize / Mathf.Max(size.x, size.y);
         spriteTransform.localScale = Vector3.one * scaleFactor;

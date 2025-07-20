@@ -23,13 +23,48 @@ public class Card : MonoBehaviour
         NormalizeSpriteSize();
     }
 
-    public void OnMouseDown()
+    void Update()
+    {
+#if UNITY_ANDROID || UNITY_IOS
+        HandleTouchInput();
+#else
+        HandleMouseInput();
+#endif
+    }
+
+    void HandleMouseInput()
+    {
+        if (Input.GetMouseButtonDown(0))
+        {
+            Vector2 worldPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            Collider2D hit = Physics2D.OverlapPoint(worldPoint);
+            if (hit != null && hit.transform == this.transform)
+            {
+                TryFlipCard();
+            }
+        }
+    }
+
+    void HandleTouchInput()
+    {
+        if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
+        {
+            Vector2 worldPoint = Camera.main.ScreenToWorldPoint(Input.GetTouch(0).position);
+            Collider2D hit = Physics2D.OverlapPoint(worldPoint);
+            if (hit != null && hit.transform == this.transform)
+            {
+                TryFlipCard();
+            }
+        }
+    }
+
+    void TryFlipCard()
     {
         if (!isFlipped)
         {
             FlipCard();
             AudioManager.Instance.PlayCardFlip();
-            gameManager.OnCardClicked(this); // new method to track turns/matches
+            gameManager.OnCardClicked(this);
         }
     }
 
@@ -44,22 +79,20 @@ public class Card : MonoBehaviour
     {
         StartCoroutine(FlipBackRoutine());
     }
+
     IEnumerator FlipBackRoutine()
     {
         animator.SetTrigger("Flip"); // Reuse the same animation
-
         yield return new WaitForSeconds(0.75f); // Mid-flip
         sr.sprite = backSprite;
         NormalizeSpriteSize();
-
         yield return new WaitForSeconds(0.25f); // Finish animation
         isFlipped = false;
     }
 
-
     IEnumerator ChangeSpriteAfterDelay()
     {
-        yield return new WaitForSeconds(0.85f); // mid-flip point
+        yield return new WaitForSeconds(0.85f); // Mid-flip delay
         sr.sprite = frontSprite;
         NormalizeSpriteSize();
     }

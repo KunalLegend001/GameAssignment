@@ -12,8 +12,8 @@ public class AudioManager : MonoBehaviour
     [Header("Music")]
     public AudioClip backgroundMusic;
 
-    private AudioSource sfxSource;
-    private AudioSource musicSource;
+    public AudioSource sfxSource;
+    public AudioSource musicSource;
 
     private void Awake()
     {
@@ -24,8 +24,8 @@ public class AudioManager : MonoBehaviour
             DontDestroyOnLoad(gameObject);
 
             // Create audio sources
-            sfxSource = gameObject.AddComponent<AudioSource>();
-            musicSource = gameObject.AddComponent<AudioSource>();
+          //  sfxSource = gameObject.AddComponent<AudioSource>();
+          //  musicSource = gameObject.AddComponent<AudioSource>();
             musicSource.loop = true;
             musicSource.playOnAwake = false;
             PlayMusic();

@@ -9,8 +9,8 @@ public class GameManager : MonoBehaviour
     public GameObject cardPrefab;
     public Sprite[] frontSprites;
     public Sprite backSprite;
-    public int columns = 2;
-    public int rows = 2;
+    public int columns;
+    public int rows;
 
     [Header("UI Elements")]
     public TMPro.TextMeshProUGUI turnsText;
@@ -18,11 +18,10 @@ public class GameManager : MonoBehaviour
     public GameObject winPanel;
 
     private List<Card> flippedCards = new List<Card>();
-    private int score = 0;
+    private List<GameObject> activeCards = new List<GameObject>(); // Track active cards
 
-    [Header("Progress Tracking")]
-    public int turns = 0;
-    public int matches = 0;
+    private int turns = 0;
+    private int matches = 0;
 
     void Start()
     {
@@ -34,9 +33,22 @@ public class GameManager : MonoBehaviour
 
     void GenerateCards()
     {
-        List<int> ids = new List<int>();
+        int totalCards = rows * columns;
 
-        for (int i = 0; i < (rows * columns) / 2; i++)
+        if (totalCards % 2 != 0)
+        {
+            Debug.LogError("Total cards must be even!");
+            return;
+        }
+
+        if (frontSprites.Length < totalCards / 2)
+        {
+            Debug.LogError($"Not enough frontSprites! Need at least {totalCards / 2}, but found {frontSprites.Length}.");
+            return;
+        }
+
+        List<int> ids = new List<int>();
+        for (int i = 0; i < totalCards / 2; i++)
         {
             ids.Add(i);
             ids.Add(i);
@@ -44,19 +56,42 @@ public class GameManager : MonoBehaviour
 
         ids.Shuffle();
 
-        float spacingX = 2f;
-        float spacingY = 2.5f;
+        Transform spawnRoot = GameObject.Find("SpawnRoot")?.transform;
+        if (spawnRoot == null)
+        {
+            Debug.LogError("SpawnRoot not found!");
+            return;
+        }
+
+        float maxWidth = 8f;
+        float maxHeight = 6f;
+
+        float cardWidth = maxWidth / columns;
+        float cardHeight = maxHeight / rows;
+
+        float startX = -maxWidth / 2 + cardWidth / 2;
+        float startY = maxHeight / 2 - cardHeight / 2;
 
         for (int i = 0; i < rows; i++)
         {
             for (int j = 0; j < columns; j++)
             {
                 int index = i * columns + j;
-                GameObject cardObj = Instantiate(cardPrefab, new Vector3(j * spacingX, -i * spacingY, 0), Quaternion.identity);
+                GameObject cardObj = Instantiate(cardPrefab, Vector3.zero, Quaternion.identity, spawnRoot);
+
+                float posX = startX + j * cardWidth;
+                float posY = startY - i * cardHeight;
+
+                cardObj.transform.localPosition = new Vector3(posX, posY, 0);
+                cardObj.transform.localScale = Vector3.one * 0.9f;
+
                 Card card = cardObj.GetComponent<Card>();
-                card.cardId = ids[index];
-                card.frontSprite = frontSprites[ids[index]];
+                int id = ids[index];
+                card.cardId = id;
+                card.frontSprite = frontSprites[id];
                 card.backSprite = backSprite;
+
+                activeCards.Add(cardObj); // Track the card
             }
         }
     }
@@ -87,8 +122,15 @@ public class GameManager : MonoBehaviour
             AudioManager.Instance.PlayCardMatch();
 
             yield return new WaitForSeconds(0.3f);
-            Destroy(flippedCards[0].gameObject);
-            Destroy(flippedCards[1].gameObject);
+
+            GameObject cardA = flippedCards[0].gameObject;
+            GameObject cardB = flippedCards[1].gameObject;
+
+            activeCards.Remove(cardA);
+            activeCards.Remove(cardB);
+
+            Destroy(cardA);
+            Destroy(cardB);
 
             CheckWinCondition();
         }
@@ -100,6 +142,15 @@ public class GameManager : MonoBehaviour
         }
 
         flippedCards.Clear();
+    }
+
+    void CheckWinCondition()
+    {
+        if (activeCards.Count == 0)
+        {
+            winPanel.SetActive(true);
+            AudioManager.Instance.StopMusic();
+        }
     }
 
     void UpdateUI()
@@ -120,16 +171,6 @@ public class GameManager : MonoBehaviour
     {
         turns = PlayerPrefs.GetInt("turns", 0);
         matches = PlayerPrefs.GetInt("matches", 0);
-    }
-
-    void CheckWinCondition()
-    {
-        int totalPairs = (rows * columns) / 2;
-        if (matches >= totalPairs)
-        {
-            winPanel.SetActive(true);
-            AudioManager.Instance.StopMusic(); // Optional
-        }
     }
 
     public void ResetProgress()

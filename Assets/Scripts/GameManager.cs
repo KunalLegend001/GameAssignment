@@ -5,19 +5,31 @@ using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
+    [Header("Card Settings")]
     public GameObject cardPrefab;
     public Sprite[] frontSprites;
     public Sprite backSprite;
-
     public int columns = 2;
     public int rows = 2;
+
+    [Header("UI Elements")]
+    public TMPro.TextMeshProUGUI turnsText;
+    public TMPro.TextMeshProUGUI matchesText;
+    public GameObject winPanel;
 
     private List<Card> flippedCards = new List<Card>();
     private int score = 0;
 
+    [Header("Progress Tracking")]
+    public int turns = 0;
+    public int matches = 0;
+
     void Start()
     {
+        LoadProgress();
         GenerateCards();
+        UpdateUI();
+        winPanel.SetActive(false);
     }
 
     void GenerateCards()
@@ -30,7 +42,7 @@ public class GameManager : MonoBehaviour
             ids.Add(i);
         }
 
-        ids.Shuffle(); // We'll create this extension below.
+        ids.Shuffle();
 
         float spacingX = 2f;
         float spacingY = 2.5f;
@@ -49,11 +61,13 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public void CardFlipped(Card card)
+    public void OnCardClicked(Card card)
     {
         if (!flippedCards.Contains(card))
         {
             flippedCards.Add(card);
+            turns++;
+            UpdateUI();
 
             if (flippedCards.Count == 2)
             {
@@ -68,46 +82,62 @@ public class GameManager : MonoBehaviour
 
         if (flippedCards[0].cardId == flippedCards[1].cardId)
         {
-            score += 10;
-            // Play match sound
             matches++;
             UpdateUI();
+            AudioManager.Instance.PlayCardMatch();
+
+            yield return new WaitForSeconds(0.3f);
+            Destroy(flippedCards[0].gameObject);
+            Destroy(flippedCards[1].gameObject);
+
+            CheckWinCondition();
         }
         else
         {
+            AudioManager.Instance.PlayCardMismatch();
             flippedCards[0].FlipBack();
             flippedCards[1].FlipBack();
-            // Play mismatch sound
         }
 
         flippedCards.Clear();
-    }
-
-
-
-    public int turns = 0;
-    public int matches = 0;
-
-    public TMPro.TextMeshProUGUI turnsText;
-    public TMPro.TextMeshProUGUI matchesText;
-
-    public void OnCardClicked(Card card)
-    {
-        if (!flippedCards.Contains(card))
-        {
-            flippedCards.Add(card);
-            turns++;
-            UpdateUI();
-
-            if (flippedCards.Count == 2)
-                StartCoroutine(CheckMatch());
-        }
     }
 
     void UpdateUI()
     {
         turnsText.text = "Turns: " + turns;
         matchesText.text = "Matches: " + matches;
+        SaveProgress();
     }
 
+    void SaveProgress()
+    {
+        PlayerPrefs.SetInt("turns", turns);
+        PlayerPrefs.SetInt("matches", matches);
+        PlayerPrefs.Save();
+    }
+
+    void LoadProgress()
+    {
+        turns = PlayerPrefs.GetInt("turns", 0);
+        matches = PlayerPrefs.GetInt("matches", 0);
+    }
+
+    void CheckWinCondition()
+    {
+        int totalPairs = (rows * columns) / 2;
+        if (matches >= totalPairs)
+        {
+            winPanel.SetActive(true);
+            AudioManager.Instance.StopMusic(); // Optional
+        }
+    }
+
+    public void ResetProgress()
+    {
+        PlayerPrefs.DeleteKey("turns");
+        PlayerPrefs.DeleteKey("matches");
+        turns = 0;
+        matches = 0;
+        UpdateUI();
+    }
 }

@@ -28,6 +28,7 @@ public class Card : MonoBehaviour
         if (!isFlipped)
         {
             FlipCard();
+            AudioManager.Instance.PlayCardFlip();
             gameManager.OnCardClicked(this); // new method to track turns/matches
         }
     }
@@ -47,7 +48,7 @@ public class Card : MonoBehaviour
     {
         animator.SetTrigger("Flip"); // Reuse the same animation
 
-        yield return new WaitForSeconds(1f); // Mid-flip
+        yield return new WaitForSeconds(0.75f); // Mid-flip
         sr.sprite = backSprite;
         NormalizeSpriteSize();
 
@@ -58,7 +59,7 @@ public class Card : MonoBehaviour
 
     IEnumerator ChangeSpriteAfterDelay()
     {
-        yield return new WaitForSeconds(1f); // mid-flip point
+        yield return new WaitForSeconds(0.85f); // mid-flip point
         sr.sprite = frontSprite;
         NormalizeSpriteSize();
     }
